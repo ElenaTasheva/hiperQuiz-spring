@@ -6,6 +6,7 @@ import lombok.NonNull;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import java.util.ArrayList;
@@ -63,7 +64,8 @@ public class User extends BaseEntity<Long, User> {
 
     @Column(nullable = false)
     @Size(min = 8, max = 15,  message = "Password must be between 8 and 15 characters long.")
-    @Pattern(regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*()_+,.\\\\\\/;':\"-]).{8,}$")
+    @Pattern(regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*()_+,.\\\\\\/;':\"-]).{8,}$",
+    message = "Password must contain a special character, at least one digit and one capital letter")
     public String getPassword() {
         return password;
     }
@@ -74,6 +76,7 @@ public class User extends BaseEntity<Long, User> {
 
     @Enumerated(EnumType.ORDINAL)
     @NonNull
+    @NotNull
     public Gender getGender() {
         return gender;
     }
@@ -129,7 +132,7 @@ public class User extends BaseEntity<Long, User> {
         this.status = status;
     }
 
-    @OneToMany(mappedBy = "author")
+    @OneToMany(mappedBy = "author", fetch = FetchType.EAGER)
     public List<Quiz> getQuizzes() {
         return quizzes;
     }

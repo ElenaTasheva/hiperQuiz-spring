@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import javax.persistence.*;
 import javax.transaction.Transactional;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +29,7 @@ public class UserRepositoryJpaImpl implements UserRepository {
 //    }
 
     @Override
+    @Transactional
     public List<User> findAll() {
         return em.createQuery("SELECT u FROM User as u", User.class).getResultList();
     }
@@ -40,13 +42,7 @@ public class UserRepositoryJpaImpl implements UserRepository {
     @Override
     @Transactional
     public User create(User entity) {
-            entity.setId(null);
-            try {
-                em.persist(entity);
-            }
-            catch (RollbackException ex){
-                throw  new EntityUpdateException("There was a problem creating the user");
-            }
+        em.persist(entity);
             return entity;
         }
 
@@ -58,21 +54,21 @@ public class UserRepositoryJpaImpl implements UserRepository {
             throw new EntityNotFoundException(String.format("Entity with ID='%s' does not exist.",
                     user.getId()));
         }
+        return em.merge(user);
 
-        try {
-            return em.merge(user);
-        } catch (IllegalArgumentException | PersistenceException e) {
-            throw new EntityUpdateException("Error updating entity:" + user, e);
-        }
     }
 
     @Override
     public User deleteById(Long id) throws EntityNotFoundException {
-        Optional<User> userToDelete = findById(id);
-        userToDelete.ifPresent(user -> em.remove(user));
-        return userToDelete.get();
-
+        Optional<User> user = findById(id);
+        if(user.isEmpty()) {
+            throw new EntityNotFoundException("User does not exist");
+        }
+        em.remove(user.get());
+        return user.get();
     }
+
+
 
     @Override
     public long count() {
@@ -81,22 +77,24 @@ public class UserRepositoryJpaImpl implements UserRepository {
 
     @Override
     public void drop() {
-        EntityTransaction transaction=em.getTransaction();
-        transaction.begin();
         em.createQuery("DELETE FROM User").executeUpdate();
-        transaction.commit();
+    }
+
+    @Transactional
+    @Override
+    public int createBatch(Collection<User> entities){
+        List<User> results = new ArrayList<>();
+        for (User u : entities) {
+            em.persist(u);
+            results.add(u);
+        }
+        return results.size();
     }
 
     @Override
-    public int createBatch(Collection<User> entities) throws EntityAlreadyExistsException, EntityAlreadyExistsException {
-        return 0;
-    }
-
-    @Override
-    public Optional<User> findByUsername(String userName) throws EntityNotFoundException {
+    public Optional<User> findByUsername(String userName){
 
         TypedQuery<User> query = em.createQuery("SELECT u FROM User u WHERE u.username = ?1", User.class);
-        User user = query.setParameter(1, userName).getSingleResult();
-        return Optional.of(user);
+        return Optional.of(query.setParameter(1, userName).getSingleResult());
     }
 }
